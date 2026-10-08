@@ -1,0 +1,20 @@
+flowchart TD
+    C["CHANGE<br/>Increase dispatch batch size"]
+    C --> D1["Desired: fewer dispatch<br/>round-trips, workers stay busy"]
+    D1 --> E1["Effect: throughput ↑,<br/>worker utilization ↑"]
+    C --> D2["Undesired: a larger queue prefix<br/>is held by each worker until done"]
+    D2 --> E2["Effect: head-of-line blocking,<br/>urgent jobs wait"]
+    E2 --> E3["Latency ↑, fairness ↓"]
+
+    E1 -.same variable couples them.-> E3
+
+    CON{{"CONTRADICTION<br/>If batch ↑ then throughput ↑,<br/>but latency ↑ / fairness ↓"}}
+    E1 --> CON
+    E3 --> CON
+
+    classDef bad fill:#ffcdd2,stroke:#b71c1c;
+    classDef good fill:#c8e6c9,stroke:#1b5e20;
+    classDef con fill:#fff9c4,stroke:#f57f17,stroke-width:2px;
+    class E1,D1 good;
+    class E2,E3,D2 bad;
+    class CON con;

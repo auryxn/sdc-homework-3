@@ -1,0 +1,17 @@
+flowchart TD
+    PC{{"Physical contradiction<br/>Batch must be LARGE for throughput<br/>AND SMALL for latency/fairness"}}
+
+    PC --> S1["Separate in TIME<br/>adaptive batch size:<br/>large under steady load,<br/>small when urgent jobs present"]
+    PC --> S2["Separate in SPACE<br/>split queue by class:<br/>bulk = large batch,<br/>priority lane = batch 1"]
+    PC --> S3["Separate in SCALE<br/>coarse dispatch,<br/>fine execution:<br/>preemptable / yielding batch"]
+    PC --> S4["Separate by CONDITION<br/>batch = f(queue depth,<br/>oldest-job age, priority)"]
+
+    S1 --> RES["Resolution:<br/>priority-aware adaptive batching"]
+    S2 --> RES
+    S3 --> RES
+    S4 --> RES
+
+    classDef con fill:#fff9c4,stroke:#f57f17,stroke-width:2px;
+    classDef res fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px;
+    class PC con;
+    class RES res;

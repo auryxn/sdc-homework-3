@@ -1,0 +1,14 @@
+flowchart LR
+    U[Callers / UI] -->|enqueue job| Q[(Job Queue)]
+    Q --> D[Dispatcher<br/>Element to change:<br/>dispatch batch size]
+    D -->|dispatch batch| W1[Worker 1]
+    D -->|dispatch batch| W2[Worker 2]
+    D -->|dispatch batch| Wn[Worker N]
+    W1 --> R[(Results / DB)]
+    W2 --> R
+    Wn --> R
+    M[Monitor / SLO gauge] -.observes.-> D
+    M -.observes.-> Q
+
+    classDef changed fill:#ffe0b2,stroke:#e65100,stroke-width:2px;
+    class D changed;
