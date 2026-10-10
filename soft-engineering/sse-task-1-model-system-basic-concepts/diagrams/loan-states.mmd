@@ -1,0 +1,8 @@
+stateDiagram-v2
+    [*] --> REQUESTED : initiate_borrow()
+    REQUESTED --> ACTIVE : approve()  [copy available & reader eligible]
+    REQUESTED --> [*] : reject()      [not available / ineligible]
+    ACTIVE --> RETURNED : return_book()
+    ACTIVE --> ACTIVE : renew()
+    RETURNED --> CLOSED : close_loan()
+    CLOSED --> [*]

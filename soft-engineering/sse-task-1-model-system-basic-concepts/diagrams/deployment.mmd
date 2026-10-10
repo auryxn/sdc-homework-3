@@ -1,0 +1,12 @@
+flowchart LR
+    subgraph Branch["Library branch"]
+        Kiosk["Express kiosk\n(C1+C2)"]
+        subgraph Backend["Backend (LAN)"]
+            Svc["Loan service (C3)"]
+            DB[("Catalogue DB (C4)")]
+        end
+        Desk["Librarian desk"]
+    end
+    Kiosk <--> Svc
+    Svc <--> DB
+    Desk <--> DB

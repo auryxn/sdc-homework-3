@@ -1,0 +1,21 @@
+flowchart LR
+    Reader([Reader — external actor])
+    Kiosk["Kiosk terminal\n(card + RFID reader, screen)"]
+    App["Kiosk application"]
+    Svc["Loan-management service"]
+    DB[("Catalogue &\nloan records")]
+    Book[/Physical book + RFID tag/]
+    Acq["Acquisition system\n(external)"]
+
+    Reader -->|"card + book"| Kiosk
+    Kiosk --> App --> Svc --> DB
+    Svc -->|"updates status"| DB
+    Book -.->|"scanned tag"| Kiosk
+    Acq -.->|"new copies (external)"| DB
+
+    subgraph SystemBoundary["SYSTEM BOUNDARY"]
+        Kiosk
+        App
+        Svc
+        DB
+    end
