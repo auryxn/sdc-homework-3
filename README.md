@@ -10,3 +10,6 @@ Homework / lab solutions, organized by subject.
 - `multithread-java` — Multithread Java
 
 Each assignment lives in its subject folder with a README describing the task and the solution artifacts.
+
+### Machine Learning
+- [Task 1 — Engineering Basics](machine-learning/ml-task-1-engineering-basics/)
