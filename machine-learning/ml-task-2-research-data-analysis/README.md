@@ -140,7 +140,7 @@ plt.tight_layout()
 plt.show()
 ```
 
-![Гистограмма и boxplot зарплаты](machine-learning/ml-task-2-research-data-analysis/figures/fig01.png)
+![Гистограмма и boxplot зарплаты](./figures/fig01.png)
 
 **Наблюдения.**
 
@@ -218,7 +218,7 @@ plt.show()
 corr
 ```
 
-![Матрица корреляций](machine-learning/ml-task-2-research-data-analysis/figures/fig02.png)
+![Матрица корреляций](./figures/fig02.png)
 
 ```
                 age    salary  years_exp
@@ -354,7 +354,7 @@ plt.tight_layout()
 plt.show()
 ```
 
-![Гистограммы всех числовых колонок](machine-learning/ml-task-2-research-data-analysis/figures/fig03.png)
+![Гистограммы всех числовых колонок](./figures/fig03.png)
 
 **Наблюдения по асимметрии.**
 
@@ -397,7 +397,7 @@ plt.tight_layout()
 plt.show()
 ```
 
-![Географический scatter California Housing](machine-learning/ml-task-2-research-data-analysis/figures/fig04.png)
+![Географический scatter California Housing](./figures/fig04.png)
 
 Классическая карта Калифорнии: плотные скопления Лос-Анджелеса и Bay Area, внутренние районы
 дешевле и дальше от побережья. Цвет = стоимость жилья, размер = население.
@@ -440,7 +440,7 @@ Name: median_house_value, dtype: float64
 Топ-3: ['median_income', 'latitude', 'total_rooms']
 ```
 
-![Матрица scatter топ-признаков](machine-learning/ml-task-2-research-data-analysis/figures/fig05.png)
+![Матрица scatter топ-признаков](./figures/fig05.png)
 
 | Признак | corr с `median_house_value` |
 |---|---|
