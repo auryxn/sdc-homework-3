@@ -1,161 +1,101 @@
 # SSE Task 11 — Contradiction
 
-**Subject:** Soft Engineering
-**Course:** 2026 HR S5 Soft Engineering
-**Task id:** `sse-task-11-contradiction`
+**Subject:** Soft Engineering · **Course:** 2026 HR S5 Soft Engineering
+
+## Task
+
+- Select a software system and specify the goal of improvement.
+- Identify the element that will be changed.
+- Define the negative effect of this change.
+- Formulate a contradiction: *"If we will [change], then we [desired effect], but this leads to [undesired effect]."*
 
 ---
 
-## 1. Task statement (as given)
+## 1. System and goal
 
-> Select a software system and specify the goal of improvement.
-> Identify the element that will be changed.
-> Define the negative effect of this change.
-> Formulate a contradiction in the format:
-> "If we will **[change]**, then we **[desired effect]**, but this leads to **[undesired effect]**."
+I use the **self-service book-loan kiosk** from Tasks 1–10 (city public library) — the kiosk
+app plus the loan service behind it. That keeps the SSE series consistent, and it has a
+contradiction worth analysing.
 
-## 2. What "contradiction" means here (systems-engineering context)
+**Goal of improvement:** raise the **number of loans the branch can complete per hour** at
+peak times (after work and on Saturday morning, when the queue at the single kiosk is
+longest).
 
-This is a **TRIZ / systems-thinking contradiction** exercise. A contradiction appears when
-improving one parameter of a system unavoidably worsens another parameter of the *same* system,
-because the two parameters are coupled through a shared element.
+## 2. Element to change
 
-Two standard formats are used in TRIZ:
+The **confirmation step of the borrow flow** — microstage M6 from Task 6, where the kiosk
+prints the due-date slip and keeps the loan summary on screen for the reader to read.
 
-| Format | Shape | Meaning |
-|---|---|---|
-| **Technical (TC)** | *If we [change], then [desired effect], but [undesired effect]* | One parameter improves, another degrades. |
-| **Physical (PC)** | *Element X must be [property A] to achieve [goal] and must be [~A] to avoid [failure]* | A single element must carry two opposite properties at once. |
+**Change:** turn the full confirmation screen into a short summary that disappears after a
+few seconds (the slip is printed anyway), so the kiosk goes back to the welcome screen
+immediately and the next reader can start.
 
-The task explicitly requires the **technical-contradiction** wording, so that is the primary
-deliverable. A physical contradiction is derived as a follow-up, because the *device* used to
-resolve a TC is normally to reformulate it into a PC and separate the opposite requirements in
-**time, space, or scale** (TRIZ "separation principles", `diagrams/contradiction-map.mmd`).
+## 3. Negative effect
 
-## 3. Chosen system and goal of improvement
+- The reader no longer sees the **due date in full** at the moment of the loan — it is only
+  on the paper slip.
+- The following reader starts scanning while the previous one is still collecting their
+  book and slip, so **two people occupy one terminal** and the next transaction starts
+  overlapping the previous one, which produces errors ("book already being borrowed").
+- Readers who skipped the slip (common) discover the due date only from the reminder email —
+  and blame the library.
 
-**Software system:** a **task/worker queue service** (job scheduler) of a typical backend —
-e.g. the worker pool of a web application that processes asynchronous jobs (email sending,
-image/video transcoding, report generation, third-party imports).
+So the change trades time for certainty: more transactions per hour, but the **confirmation
+signal gets weaker**, and weak confirmation is exactly where self-service errors come from.
 
-**Element to be changed:** the **scheduler's dispatch policy — specifically the number /
-granularity of job batches that the dispatcher pushes to workers in a single cycle**
-(i.e. the *batching* of the dispatch, a property of the *dispatcher* element).
+## 4. The contradiction
 
-**Goal of improvement:** raise **system throughput / reduce idle worker time** while keeping
-the system responsive and safe under load — i.e. improve *speed of processing the queue*
-without degrading *fairness/freshness of urgent jobs*.
+> **If we will shorten the confirmation step to a few seconds so the kiosk returns to the
+> welcome screen sooner, then we will increase the number of loans completed per hour, but
+> this leads to readers not seeing their due date and to overlapping transactions at a single
+> terminal (more slips lost, more due-date errors, more reader support requests).**
 
-### 3.1 System model (element view)
+Compressed: *faster hand-over per reader, but less certainty per reader.*
+
+Diagram of the cause→effect chain:
 
 ```mermaid
 flowchart LR
-    U[Callers / UI] -->|enqueue job| Q[(Job Queue)]
-    Q --> D[Dispatcher<br/>«Element to change»]
-    D -->|dispatch batch| W1[Worker 1]
-    D -->|dispatch batch| W2[Worker 2]
-    D -->|dispatch batch| Wn[Worker N]
-    W1 --> R[(Results / DB)]
-    W2 --> R
-    Wn --> R
-    M[Monitor / SLO gauge] -.observes.-> D
-    M -.observes.-> Q
+    A["Shorter confirmation step"] --> B["Kiosk free sooner"]
+    B --> C["More loans / hour"]
+    A --> D["Due date not read on screen"]
+    A --> E["Next reader overlaps"]
+    D --> F["Lost slip → missed due date"]
+    E --> G["Double-scan errors, desk complaints"]
+    C --> H{"Contradiction"}
+    F --> H
+    G --> H
 ```
 
-`diagrams/system-model.mmd` — source for the diagram above.
+## 5. Is it a real contradiction?
 
-## 4. The change, the desired effect and the undesired effect
+Yes — both parameters are driven by the **same element**. The confirmation step is the only
+moment where the reader is guaranteed to be looking at the screen, so making it shorter
+improves throughput and degrades certainty. There is no length that is both "short enough to
+free the terminal" and "long enough to be read".
 
-**Change:**
-Increase the **batch size and batch size limit (max jobs handed to a worker per dispatch cycle)**,
-so that workers receive more work per dispatch and context-switching/dispatch overhead falls.
+## 6. How I would resolve it (separation)
 
-**Desired effect:**
-Fewer dispatch round-trips and less per-job bookkeeping ⇒ **higher throughput**; workers stay
-busy instead of starving between dispatches; CPU/cache utilization improves.
+A contradiction is useful when it points at a separation. Here the opposite demands can be
+split by **condition** and by **space**:
 
-**Undesired (negative) effect:**
-Because batching pulls a **larger prefix of the queue** into a worker at once **and holds the
-batch until it completes**, a **single slow or long-running job blocks the whole batch** and
-**new, urgent, high-priority jobs wait behind already-dispatched jobs**. Result:
-**latency / wait-time for a single job grows** (head-of-line blocking) and the system becomes
-**less fair and less responsive** under variable load.
-
-## 5. Contradiction formulation
-
-> **If we will increase the dispatch batch size (the number of jobs handed to a worker per
-> dispatch cycle), then we will increase throughput and worker utilization, but this leads to
-> an increase in per-job latency and head-of-line blocking for urgent jobs (loss of
-> responsiveness and fairness).**
-
-Compressed form:
-
-> **If we will batch the dispatch more coarsely, then we will process more work per unit time,
-> but this leads to worse worst-case latency and poorer priority fairness.**
-
-### 5.1 Why it is a genuine contradiction
-
-The two parameters (throughput, latency/fairness) are **not independently controllable** by
-the chosen element: they are both functions of the *same* variable — batch size. Making the
-dispatcher more efficient at handoff (bigger batches) is exactly what makes it less able to
-react quickly (bigger inertia). There is no batch size that is simultaneously *large enough*
-for peak throughput and *small enough* for minimal latency.
-
-## 6. Physical contradiction (derived)
-
-The technical contradiction above can be sharpened into a physical contradiction on the
-**batch size of the dispatcher**:
-
-> **The dispatch batch must be LARGE (many jobs per cycle) in order to reduce dispatch overhead
-> and maximize throughput, AND the dispatch batch must be SMALL (few jobs per cycle) in order
-> to minimize per-job latency and preserve responsiveness/fairness for urgent jobs.**
-
-Same element (batch size), two opposite required values — the hallmark of a physical
-contradiction. The next section shows how this PC is separated.
-
-## 7. Resolving the contradiction (separation principles)
-
-A good contradiction analysis does not stop at the statement — it shows *where* the opposite
-demands can be **separated** so both goals are partly met (this is exactly the TRIZ technique
-of "separation of contradictory requirements").
-
-| Separation | How it is applied here |
+| Separation | Move |
 |---|---|
-| **In time** | Use **adaptive batching**: large batches during steady high-load periods, tiny batches (or batch=1) when the queue contains urgent/priority jobs or when load is low. Batch size changes over time. |
-| **In space** | **Split the queue by class** (priority vs. bulk) and use different batch sizes per stream: bulk jobs get large batches, real-time/priority jobs get batch=1 with a separate fast lane. |
-| **In scale** | Set a **soft cap with preemption**: a large batch may be *dispatched*, but individual items can be **preempted / yielded** mid-batch, so batch granularity is coarse at the dispatch level yet fine at the execution level. |
-| **Condition / threshold** | Define an **SLA-driven rule**: batch size is a function of (queue depth, oldest-job age, job priority class) rather than a constant. |
+| **In space** | The confirmation moves off the shared terminal: the due date is sent to the reader's phone (SMS/app) and printed on the slip, while the *screen* frees up immediately. The terminal is no longer the only place the date lives. |
+| **By condition** | Fast confirmation (3 s) for a normal loan, full confirmation (until the reader taps "done") only when something is unusual — a fine, a near-limit warning, or a first loan for that reader. |
+| **In time** | Lock the next transaction until the book leaves the RFID pad, so the terminal is freed by the *physical* end of the transaction, not by a timer. |
 
-### 7.1 Consistency and trade-off table
+The chosen resolution is the **first two together**: the reader keeps certainty (phone + slip,
+plus the slow path when it matters) and the kiosk regains throughput, because in the routine
+case it is idle for 3 seconds, not 20.
 
-| Option | Throughput | Latency (urgent jobs) | Fairness | Complexity | Verdict |
-|---|---|---|---|---|---|
-| Small batches (batch = 1) | low | minimal | high | low | safe but slow |
-| Large batches | high | high | low | low | fast but unresponsive |
-| **Adaptive / priority-aware batching** | high | low–moderate | high | moderate | ✔ recommended resolution |
+---
 
-## 8. Deliverables map
+## Conclusion
 
-| Artifact | Purpose |
-|---|---|
-| `README.md` (this file) | Full solution: system, element, effects, contradiction, resolution |
-| `diagrams/system-model.mmd` | Element view of the queue service, marks the changed element |
-| `diagrams/contradiction-map.mmd` | Cause→effect chain and the contradiction point |
-| `diagrams/separation.mmd` | Separation-principle resolution tree |
-| `assets/system-model.svg` | Rendered system model |
-| `assets/contradiction-map.svg` | Rendered contradiction chain |
-| `assets/separation.svg` | Rendered separation tree |
-| `tables/analysis.md` | Standalone parameter / effect / contradiction tables |
-| `code/dispatcher.py` | Minimal runnable demo of the batch-size contradiction |
-
-## 9. Reproduce the diagrams
-
-```bash
-# from this folder
-npx -y @mermaid-js/mermaid-cli -i diagrams/system-model.mmd -o assets/system-model.svg
-npx -y @mermaid-js/mermaid-cli -i diagrams/contradiction-map.mmd -o assets/contradiction-map.svg
-npx -y @mermaid-js/mermaid-cli -i diagrams/separation.mmd -o assets/separation.svg
-```
-
-Rendered SVGs are committed under `assets/` so the diagrams are visible on GitHub without
-building anything.
+The kiosk's improvement target — loans per hour — collides with the confirmation step that
+makes each loan trustworthy: shortening it speeds the queue but loses the due date and lets
+transactions overlap. The contradiction is genuine because one element controls both
+parameters. It is resolved not by picking a batch size for time, but by moving the
+confirmation off the shared screen — the reader still gets certainty, the terminal gets its
+time back.
