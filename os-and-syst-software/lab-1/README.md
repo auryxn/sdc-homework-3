@@ -34,7 +34,9 @@ VirtualBox на ноутбуке (Intel Core i7, 16 ГБ ОЗУ). Это пол�
 sudo pacman -S --needed base-devel gcc gdb valgrind make git code
 ```
 
-Проверка версий — [`artifacts/screenshots/01-versions.png`](artifacts/screenshots/01-versions.png):
+Проверка версий:
+
+![Версии gcc, gdb, valgrind и ядра](artifacts/screenshots/01-versions.png)
 
 ```console
 $ gcc --version
@@ -147,7 +149,7 @@ $ ./build/hello_linked
 Hello, OS!
 ```
 
-Скриншот: [`artifacts/screenshots/02-build-stages.png`](artifacts/screenshots/02-build-stages.png).
+![Стадии сборки: препроцессор, объектный файл, компоновка](artifacts/screenshots/02-build-stages.png)
 
 **Почему `hello.i` в 140 раз больше исходника.** `wc -l` даёт 6 строк в
 `hello.c` против 844 строк в `hello.i`: препроцессор физически подставляет в
@@ -199,7 +201,7 @@ $5 = 0
 [Inferior 1 (process 5078) exited normally]
 ```
 
-Скриншот: [`artifacts/screenshots/03-gdb.png`](artifacts/screenshots/03-gdb.png).
+![Отладка в gdb: точка останова в add, Step Over, finish](artifacts/screenshots/03-gdb.png)
 
 Что видно:
 
@@ -243,7 +245,7 @@ collect2: error: ld returned 1 exit status
 выдаёт **компоновщик** `ld` (`undefined reference`): он ищет определение символа
 во всех объектных файлах и библиотеках и не находит его.
 
-Скриншот обеих ошибок: [`artifacts/screenshots/04-errors.png`](artifacts/screenshots/04-errors.png).
+![Сообщения компилятора и компоновщика](artifacts/screenshots/04-errors.png)
 
 ## 6. Проверка памяти: valgrind
 
@@ -264,9 +266,10 @@ $ valgrind --leak-check=full ./build/sum < scripts/stdin.txt
 
 ## 7. IDE
 
-В VS Code открыт корень `lab-1` (скриншот
-[`artifacts/screenshots/05-vscode.png`](artifacts/screenshots/05-vscode.png)),
-конфигурации лежат в `.vscode/`:
+В VS Code открыт корень `lab-1`, конфигурации лежат в `.vscode/`:
+
+![Проект lab-1 открыт в VS Code](artifacts/screenshots/05-vscode.png)
+
 
 * `tasks.json` — `gcc -g -O0` для `hello` и `sum` (Ctrl+Shift+B);
 * `launch.json` — запуск `sum` под `gdb` (F5), с вводом из `scripts/stdin.txt`.
