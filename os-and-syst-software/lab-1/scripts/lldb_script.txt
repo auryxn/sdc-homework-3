@@ -1,0 +1,21 @@
+breakpoint set --name main
+process launch -i scripts/stdin.txt
+frame info
+next
+next
+frame variable num1
+next
+next
+frame variable num2
+step
+frame info
+frame variable a b
+next
+frame variable result
+next
+frame variable num1 num2 sum
+next
+frame variable num1 num2 sum
+next
+frame variable num1 num2 sum
+continue

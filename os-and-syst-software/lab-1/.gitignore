@@ -1,0 +1,3 @@
+build/
+artifacts/*.html
+.DS_Store

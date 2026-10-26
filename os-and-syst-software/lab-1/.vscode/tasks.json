@@ -1,0 +1,23 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build hello",
+      "type": "shell",
+      "command": "clang",
+      "args": ["-g", "-O0", "src/hello.c", "-o", "build/hello"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "build",
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "build sum",
+      "type": "shell",
+      "command": "clang",
+      "args": ["-g", "-O0", "src/sum.c", "-o", "build/sum"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$gcc"]
+    }
+  ]
+}

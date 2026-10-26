@@ -1,0 +1,322 @@
+
+===================================================================
+1. Окружение
+===================================================================
+
+$ uname -a
+Darwin MacBook-Pro-Aliaksei.local 21.6.0 Darwin Kernel Version 21.6.0: Mon Jun 24 00:56:10 PDT 2024; root:xnu-8020.240.18.709.2~1/RELEASE_X86_64 x86_64
+[exit code: 0]
+
+$ clang --version
+Apple clang version 14.0.0 (clang-1400.0.29.202)
+Target: x86_64-apple-darwin21.6.0
+Thread model: posix
+
+$ lldb --version
+lldb-1400.0.38.17
+Apple Swift version 5.7.2 (swiftlang-5.7.2.135.5 clang-1400.0.29.51)
+
+$ make --version
+GNU Make 3.81
+
+===================================================================
+2. Сборка hello.c из командной строки
+===================================================================
+
+$ cat src/hello.c
+#include <stdio.h>
+
+int main(void) {
+    printf("Hello, OS!\n");
+    return 0;
+}
+[exit code: 0]
+
+$ clang -g -O0 src/hello.c -o build/hello
+[exit code: 0]
+
+$ ./build/hello
+Hello, OS!
+[exit code: 0]
+
+$ echo $?
+0
+
+===================================================================
+3. Программа «сумма двух чисел»
+===================================================================
+
+$ cat src/sum.c
+#include <stdio.h>
+
+int add(int a, int b) {
+    int result = a + b;
+    return result;
+}
+
+int main(void) {
+    int num1, num2, sum;
+
+    printf("Введите первое число: ");
+    scanf("%d", &num1);
+
+    printf("Введите второе число: ");
+    scanf("%d", &num2);
+
+    sum = add(num1, num2);
+    printf("Сумма: %d\n", sum);
+    return 0;
+}
+[exit code: 0]
+
+$ clang -g -O0 src/sum.c -o build/sum
+[exit code: 0]
+
+$ printf '12\n30\n' | ./build/sum
+Введите первое число: Введите второе число: Сумма: 42
+
+===================================================================
+4. Стадии сборки: препроцессор, компиляция, компоновка
+===================================================================
+
+$ clang -E src/hello.c -o build/hello.i
+[exit code: 0]
+
+$ clang -c src/hello.c -o build/hello.o
+[exit code: 0]
+
+$ clang build/hello.o -o build/hello_linked
+[exit code: 0]
+
+$ ./build/hello_linked
+Hello, OS!
+[exit code: 0]
+
+$ wc -l src/hello.c build/hello.i
+       6 src/hello.c
+     556 build/hello.i
+     562 total
+
+$ file build/hello.o build/hello
+build/hello.o: Mach-O 64-bit object x86_64
+build/hello:   Mach-O 64-bit executable x86_64
+
+===================================================================
+5. Отладка: точка останова, Step Over и Step Into
+===================================================================
+
+$ lldb --batch -s scripts/lldb_script.txt build/sum
+(lldb) target create "build/sum"
+Current executable set to '/Users/auryxn/work/sdc-homework-3/os-and-syst-software/lab-1/build/sum' (x86_64).
+(lldb) command source -s 0 'scripts/lldb_script.txt'
+Executing commands in '/Users/auryxn/work/sdc-homework-3/os-and-syst-software/lab-1/scripts/lldb_script.txt'.
+(lldb) breakpoint set --name main
+Breakpoint 1: where = sum`main + 15 at sum.c:11:5, address = 0x0000000100003eaf
+(lldb) process launch -i scripts/stdin.txt
+Process 32045 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
+    frame #0: 0x0000000100003eaf sum`main at sum.c:11:5
+   8   	int main(void) {
+   9   	    int num1, num2, sum;
+   10  	
+-> 11  	    printf("Введите первое число: ");
+    	    ^
+   12  	    scanf("%d", &num1);
+   13  	
+   14  	    printf("Введите второе число: ");
+Target 0: (sum) stopped.
+Process 32045 launched: '/Users/auryxn/work/sdc-homework-3/os-and-syst-software/lab-1/build/sum' (x86_64)
+(lldb) frame info
+frame #0: 0x0000000100003eaf sum`main at sum.c:11:5
+(lldb) next
+Process 32045 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = step over
+    frame #0: 0x0000000100003ebd sum`main at sum.c:12:5
+   9   	    int num1, num2, sum;
+   10  	
+   11  	    printf("Введите первое число: ");
+-> 12  	    scanf("%d", &num1);
+    	    ^
+   13  	
+   14  	    printf("Введите второе число: ");
+   15  	    scanf("%d", &num2);
+Target 0: (sum) stopped.
+(lldb) next
+Process 32045 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = step over
+    frame #0: 0x0000000100003ecf sum`main at sum.c:14:5
+   11  	    printf("Введите первое число: ");
+   12  	    scanf("%d", &num1);
+   13  	
+-> 14  	    printf("Введите второе число: ");
+    	    ^
+   15  	    scanf("%d", &num2);
+   16  	
+   17  	    sum = add(num1, num2);
+Target 0: (sum) stopped.
+(lldb) frame variable num1
+(int) num1 = 12
+(lldb) next
+Process 32045 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = step over
+    frame #0: 0x0000000100003edd sum`main at sum.c:15:5
+   12  	    scanf("%d", &num1);
+   13  	
+   14  	    printf("Введите второе число: ");
+-> 15  	    scanf("%d", &num2);
+    	    ^
+   16  	
+   17  	    sum = add(num1, num2);
+   18  	    printf("Сумма: %d\n", sum);
+Target 0: (sum) stopped.
+(lldb) next
+Process 32045 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = step over
+    frame #0: 0x0000000100003eef sum`main at sum.c:17:15
+   14  	    printf("Введите второе число: ");
+   15  	    scanf("%d", &num2);
+   16  	
+-> 17  	    sum = add(num1, num2);
+    	              ^
+   18  	    printf("Сумма: %d\n", sum);
+   19  	    return 0;
+   20  	}
+Target 0: (sum) stopped.
+(lldb) frame variable num2
+(int) num2 = 30
+(lldb) step
+Process 32045 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = step in
+    frame #0: 0x0000000100003e8a sum`add(a=12, b=30) at sum.c:4:18
+   1   	#include <stdio.h>
+   2   	
+   3   	int add(int a, int b) {
+-> 4   	    int result = a + b;
+    	                 ^
+   5   	    return result;
+   6   	}
+   7   	
+Target 0: (sum) stopped.
+(lldb) frame info
+frame #0: 0x0000000100003e8a sum`add(a=12, b=30) at sum.c:4:18
+(lldb) frame variable a b
+(int) a = 12
+(int) b = 30
+(lldb) next
+Process 32045 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = step over
+    frame #0: 0x0000000100003e93 sum`add(a=12, b=30) at sum.c:5:12
+   2   	
+   3   	int add(int a, int b) {
+   4   	    int result = a + b;
+-> 5   	    return result;
+    	           ^
+   6   	}
+   7   	
+   8   	int main(void) {
+Target 0: (sum) stopped.
+(lldb) frame variable result
+(int) result = 42
+(lldb) next
+Process 32045 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = step over
+    frame #0: 0x0000000100003efa sum`main at sum.c:17:9
+   14  	    printf("Введите второе число: ");
+   15  	    scanf("%d", &num2);
+   16  	
+-> 17  	    sum = add(num1, num2);
+    	        ^
+   18  	    printf("Сумма: %d\n", sum);
+   19  	    return 0;
+   20  	}
+Target 0: (sum) stopped.
+(lldb) frame variable num1 num2 sum
+(int) num1 = 12
+(int) num2 = 30
+(int) sum = 37
+(lldb) next
+Process 32045 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = step over
+    frame #0: 0x0000000100003efd sum`main at sum.c:18:32
+   15  	    scanf("%d", &num2);
+   16  	
+   17  	    sum = add(num1, num2);
+-> 18  	    printf("Сумма: %d\n", sum);
+    	                               ^
+   19  	    return 0;
+   20  	}
+Target 0: (sum) stopped.
+(lldb) frame variable num1 num2 sum
+(int) num1 = 12
+(int) num2 = 30
+(int) sum = 42
+(lldb) next
+Введите первое число: Введите второе число: Сумма: 42
+Process 32045 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = step over
+    frame #0: 0x0000000100003f0e sum`main at sum.c:19:5
+   16  	
+   17  	    sum = add(num1, num2);
+   18  	    printf("Сумма: %d\n", sum);
+-> 19  	    return 0;
+    	    ^
+   20  	}
+Target 0: (sum) stopped.
+(lldb) frame variable num1 num2 sum
+(int) num1 = 12
+(int) num2 = 30
+(int) sum = 42
+(lldb) continue
+Process 32045 resuming
+Process 32045 exited with status = 0 (0x00000000)
+[exit code: 0]
+
+===================================================================
+6. Намеренная ошибка: без #include <stdio.h>
+===================================================================
+
+$ cat src/noinclude.c
+int main(void) {
+    printf("Hello, OS!\n");
+    return 0;
+}
+[exit code: 0]
+
+$ clang -g -O0 src/noinclude.c -o build/noinclude
+src/noinclude.c:2:5: error: implicitly declaring library function 'printf' with type 'int (const char *, ...)' [-Werror,-Wimplicit-function-declaration]
+    printf("Hello, OS!\n");
+    ^
+src/noinclude.c:2:5: note: include the header <stdio.h> or explicitly provide a declaration for 'printf'
+1 error generated.
+[exit code: 1]
+
+===================================================================
+7. Намеренная ошибка: вызов функции без определения
+===================================================================
+
+$ cat src/badcall.c
+#include <stdio.h>
+
+/* Объявление есть, определения нигде нет: ошибка должна возникнуть на компоновке. */
+int does_not_exist(void);
+
+int main(void) {
+    printf("before\n");
+    does_not_exist();
+    printf("after\n");
+    return 0;
+}
+[exit code: 0]
+
+$ clang -g -O0 src/badcall.c -o build/badcall
+Undefined symbols for architecture x86_64:
+  "_does_not_exist", referenced from:
+      _main in badcall-8cb5cf.o
+ld: symbol(s) not found for architecture x86_64
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+[exit code: 1]
+
+===================================================================
+Готово
+===================================================================
+Полный лог сохранён в artifacts/lab-output.txt

@@ -1,0 +1,22 @@
+break main
+run < scripts/stdin.txt
+next
+next
+print num1
+next
+next
+print num2
+step
+frame
+info args
+next
+print result
+next
+print num1
+print num2
+print sum
+next
+print num1
+print num2
+print sum
+continue
