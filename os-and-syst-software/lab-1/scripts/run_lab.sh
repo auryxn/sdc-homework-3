@@ -70,7 +70,7 @@ wc -l src/hello.c build/hello.i 2>&1 | tee -a "$OUT"
 file build/hello.o build/hello 2>&1 | tee -a "$OUT"
 
 section "5. Отладка: точка останова, Step Over и Step Into"
-{ echo; echo "\$ $DBG --batch -s $DBG_SCRIPT build/sum"; } | tee -a "$OUT"
+{ echo; echo "\$ $DBG --batch -x $DBG_SCRIPT build/sum"; } | tee -a "$OUT"
 if [ "$DBG" = "lldb" ]; then
   lldb --batch -s "$DBG_SCRIPT" build/sum 2>&1 | tee -a "$OUT"
 else
@@ -85,6 +85,11 @@ run "$CC" -g -O0 src/noinclude.c -o build/noinclude
 section "7. Намеренная ошибка: вызов функции без определения"
 run cat src/badcall.c
 run "$CC" -g -O0 src/badcall.c -o build/badcall
+
+section "8. Проверка памяти (valgrind)"
+{ echo; echo "\$ valgrind --leak-check=full ./build/sum < scripts/stdin.txt"; } | tee -a "$OUT"
+DEBUGINFOD_URLS="${DEBUGINFOD_URLS:-https://debuginfod.archlinux.org}" \
+  valgrind --leak-check=full ./build/sum < scripts/stdin.txt 2>&1 | tail -12 | tee -a "$OUT"
 
 section "Готово"
 echo "Полный лог сохранён в $OUT" | tee -a "$OUT"

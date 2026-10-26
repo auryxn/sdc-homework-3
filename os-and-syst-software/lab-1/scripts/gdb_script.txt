@@ -1,22 +1,12 @@
-break main
+set charset UTF-8
+break add
 run < scripts/stdin.txt
-next
-next
-print num1
-next
-next
-print num2
-step
-frame
+bt
 info args
+print a
+print b
 next
 print result
-next
-print num1
-print num2
-print sum
-next
-print num1
-print num2
+finish
 print sum
 continue

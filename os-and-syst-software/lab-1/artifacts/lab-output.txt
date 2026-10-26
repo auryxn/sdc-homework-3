@@ -4,20 +4,21 @@
 ===================================================================
 
 $ uname -a
-Darwin MacBook-Pro-Aliaksei.local 21.6.0 Darwin Kernel Version 21.6.0: Mon Jun 24 00:56:10 PDT 2024; root:xnu-8020.240.18.709.2~1/RELEASE_X86_64 x86_64
+Linux archlinux 7.2.11-arch1-1 #1 SMP PREEMPT_DYNAMIC Fri, 16 Oct 2026 00:28:58 +0000 x86_64 GNU/Linux
 [exit code: 0]
 
-$ clang --version
-Apple clang version 14.0.0 (clang-1400.0.29.202)
-Target: x86_64-apple-darwin21.6.0
-Thread model: posix
+$ gcc --version
+gcc (GCC) 16.2.1 20260810
+Copyright (C) 2026 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
 
-$ lldb --version
-lldb-1400.0.38.17
-Apple Swift version 5.7.2 (swiftlang-5.7.2.135.5 clang-1400.0.29.51)
+$ gdb --version
+GNU gdb (GDB) 18.1
+Copyright (C) 2026 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 
 $ make --version
-GNU Make 3.81
+GNU Make 4.4.1
 
 ===================================================================
 2. Сборка hello.c из командной строки
@@ -32,7 +33,7 @@ int main(void) {
 }
 [exit code: 0]
 
-$ clang -g -O0 src/hello.c -o build/hello
+$ gcc -g -O0 src/hello.c -o build/hello
 [exit code: 0]
 
 $ ./build/hello
@@ -69,7 +70,7 @@ int main(void) {
 }
 [exit code: 0]
 
-$ clang -g -O0 src/sum.c -o build/sum
+$ gcc -g -O0 src/sum.c -o build/sum
 [exit code: 0]
 
 $ printf '12\n30\n' | ./build/sum
@@ -79,13 +80,13 @@ $ printf '12\n30\n' | ./build/sum
 4. Стадии сборки: препроцессор, компиляция, компоновка
 ===================================================================
 
-$ clang -E src/hello.c -o build/hello.i
+$ gcc -E src/hello.c -o build/hello.i
 [exit code: 0]
 
-$ clang -c src/hello.c -o build/hello.o
+$ gcc -c src/hello.c -o build/hello.o
 [exit code: 0]
 
-$ clang build/hello.o -o build/hello_linked
+$ gcc build/hello.o -o build/hello_linked
 [exit code: 0]
 
 $ ./build/hello_linked
@@ -93,182 +94,39 @@ Hello, OS!
 [exit code: 0]
 
 $ wc -l src/hello.c build/hello.i
-       6 src/hello.c
-     556 build/hello.i
-     562 total
+    6 src/hello.c
+  844 build/hello.i
+  850 total
 
 $ file build/hello.o build/hello
-build/hello.o: Mach-O 64-bit object x86_64
-build/hello:   Mach-O 64-bit executable x86_64
+build/hello.o: ELF 64-bit LSB relocatable, x86-64, version 1 (SYSV), not stripped
+build/hello:   ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=785d78ddbb8bfa6e49ad43e066ab30c3dd9c41c1, for GNU/Linux 4.4.0, with debug_info, not stripped
 
 ===================================================================
 5. Отладка: точка останова, Step Over и Step Into
 ===================================================================
 
-$ lldb --batch -s scripts/lldb_script.txt build/sum
-(lldb) target create "build/sum"
-Current executable set to '/Users/auryxn/work/sdc-homework-3/os-and-syst-software/lab-1/build/sum' (x86_64).
-(lldb) command source -s 0 'scripts/lldb_script.txt'
-Executing commands in '/Users/auryxn/work/sdc-homework-3/os-and-syst-software/lab-1/scripts/lldb_script.txt'.
-(lldb) breakpoint set --name main
-Breakpoint 1: where = sum`main + 15 at sum.c:11:5, address = 0x0000000100003eaf
-(lldb) process launch -i scripts/stdin.txt
-Process 32045 stopped
-* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
-    frame #0: 0x0000000100003eaf sum`main at sum.c:11:5
-   8   	int main(void) {
-   9   	    int num1, num2, sum;
-   10  	
--> 11  	    printf("Введите первое число: ");
-    	    ^
-   12  	    scanf("%d", &num1);
-   13  	
-   14  	    printf("Введите второе число: ");
-Target 0: (sum) stopped.
-Process 32045 launched: '/Users/auryxn/work/sdc-homework-3/os-and-syst-software/lab-1/build/sum' (x86_64)
-(lldb) frame info
-frame #0: 0x0000000100003eaf sum`main at sum.c:11:5
-(lldb) next
-Process 32045 stopped
-* thread #1, queue = 'com.apple.main-thread', stop reason = step over
-    frame #0: 0x0000000100003ebd sum`main at sum.c:12:5
-   9   	    int num1, num2, sum;
-   10  	
-   11  	    printf("Введите первое число: ");
--> 12  	    scanf("%d", &num1);
-    	    ^
-   13  	
-   14  	    printf("Введите второе число: ");
-   15  	    scanf("%d", &num2);
-Target 0: (sum) stopped.
-(lldb) next
-Process 32045 stopped
-* thread #1, queue = 'com.apple.main-thread', stop reason = step over
-    frame #0: 0x0000000100003ecf sum`main at sum.c:14:5
-   11  	    printf("Введите первое число: ");
-   12  	    scanf("%d", &num1);
-   13  	
--> 14  	    printf("Введите второе число: ");
-    	    ^
-   15  	    scanf("%d", &num2);
-   16  	
-   17  	    sum = add(num1, num2);
-Target 0: (sum) stopped.
-(lldb) frame variable num1
-(int) num1 = 12
-(lldb) next
-Process 32045 stopped
-* thread #1, queue = 'com.apple.main-thread', stop reason = step over
-    frame #0: 0x0000000100003edd sum`main at sum.c:15:5
-   12  	    scanf("%d", &num1);
-   13  	
-   14  	    printf("Введите второе число: ");
--> 15  	    scanf("%d", &num2);
-    	    ^
-   16  	
-   17  	    sum = add(num1, num2);
-   18  	    printf("Сумма: %d\n", sum);
-Target 0: (sum) stopped.
-(lldb) next
-Process 32045 stopped
-* thread #1, queue = 'com.apple.main-thread', stop reason = step over
-    frame #0: 0x0000000100003eef sum`main at sum.c:17:15
-   14  	    printf("Введите второе число: ");
-   15  	    scanf("%d", &num2);
-   16  	
--> 17  	    sum = add(num1, num2);
-    	              ^
-   18  	    printf("Сумма: %d\n", sum);
-   19  	    return 0;
-   20  	}
-Target 0: (sum) stopped.
-(lldb) frame variable num2
-(int) num2 = 30
-(lldb) step
-Process 32045 stopped
-* thread #1, queue = 'com.apple.main-thread', stop reason = step in
-    frame #0: 0x0000000100003e8a sum`add(a=12, b=30) at sum.c:4:18
-   1   	#include <stdio.h>
-   2   	
-   3   	int add(int a, int b) {
--> 4   	    int result = a + b;
-    	                 ^
-   5   	    return result;
-   6   	}
-   7   	
-Target 0: (sum) stopped.
-(lldb) frame info
-frame #0: 0x0000000100003e8a sum`add(a=12, b=30) at sum.c:4:18
-(lldb) frame variable a b
-(int) a = 12
-(int) b = 30
-(lldb) next
-Process 32045 stopped
-* thread #1, queue = 'com.apple.main-thread', stop reason = step over
-    frame #0: 0x0000000100003e93 sum`add(a=12, b=30) at sum.c:5:12
-   2   	
-   3   	int add(int a, int b) {
-   4   	    int result = a + b;
--> 5   	    return result;
-    	           ^
-   6   	}
-   7   	
-   8   	int main(void) {
-Target 0: (sum) stopped.
-(lldb) frame variable result
-(int) result = 42
-(lldb) next
-Process 32045 stopped
-* thread #1, queue = 'com.apple.main-thread', stop reason = step over
-    frame #0: 0x0000000100003efa sum`main at sum.c:17:9
-   14  	    printf("Введите второе число: ");
-   15  	    scanf("%d", &num2);
-   16  	
--> 17  	    sum = add(num1, num2);
-    	        ^
-   18  	    printf("Сумма: %d\n", sum);
-   19  	    return 0;
-   20  	}
-Target 0: (sum) stopped.
-(lldb) frame variable num1 num2 sum
-(int) num1 = 12
-(int) num2 = 30
-(int) sum = 37
-(lldb) next
-Process 32045 stopped
-* thread #1, queue = 'com.apple.main-thread', stop reason = step over
-    frame #0: 0x0000000100003efd sum`main at sum.c:18:32
-   15  	    scanf("%d", &num2);
-   16  	
-   17  	    sum = add(num1, num2);
--> 18  	    printf("Сумма: %d\n", sum);
-    	                               ^
-   19  	    return 0;
-   20  	}
-Target 0: (sum) stopped.
-(lldb) frame variable num1 num2 sum
-(int) num1 = 12
-(int) num2 = 30
-(int) sum = 42
-(lldb) next
+$ gdb --batch -x scripts/gdb_script.txt build/sum
+Breakpoint 1 at 0x1163: file src/sum.c, line 4.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+
+Breakpoint 1, add (a=12, b=30) at src/sum.c:4
+4	    int result = a + b;
+#0  add (a=12, b=30) at src/sum.c:4
+#1  0x00005555555551f7 in main () at src/sum.c:17
+a = 12
+b = 30
+$1 = 12
+$2 = 30
+5	    return result;
+$3 = 42
+0x00005555555551f7 in main () at src/sum.c:17
+17	    sum = add(num1, num2);
+Value returned is $4 = 42
+$5 = 0
 Введите первое число: Введите второе число: Сумма: 42
-Process 32045 stopped
-* thread #1, queue = 'com.apple.main-thread', stop reason = step over
-    frame #0: 0x0000000100003f0e sum`main at sum.c:19:5
-   16  	
-   17  	    sum = add(num1, num2);
-   18  	    printf("Сумма: %d\n", sum);
--> 19  	    return 0;
-    	    ^
-   20  	}
-Target 0: (sum) stopped.
-(lldb) frame variable num1 num2 sum
-(int) num1 = 12
-(int) num2 = 30
-(int) sum = 42
-(lldb) continue
-Process 32045 resuming
-Process 32045 exited with status = 0 (0x00000000)
+[Inferior 1 (process 6381) exited normally]
 [exit code: 0]
 
 ===================================================================
@@ -282,12 +140,18 @@ int main(void) {
 }
 [exit code: 0]
 
-$ clang -g -O0 src/noinclude.c -o build/noinclude
-src/noinclude.c:2:5: error: implicitly declaring library function 'printf' with type 'int (const char *, ...)' [-Werror,-Wimplicit-function-declaration]
-    printf("Hello, OS!\n");
-    ^
-src/noinclude.c:2:5: note: include the header <stdio.h> or explicitly provide a declaration for 'printf'
-1 error generated.
+$ gcc -g -O0 src/noinclude.c -o build/noinclude
+src/noinclude.c: In function ‘main’:
+src/noinclude.c:2:5: error: implicit declaration of function ‘printf’ [-Wimplicit-function-declaration]
+    2 |     printf("Hello, OS!\n");
+      |     ^~~~~~
+src/noinclude.c:1:1: note: include ‘<stdio.h>’ or provide a declaration of ‘printf’
+  +++ |+#include <stdio.h>
+    1 | int main(void) {
+src/noinclude.c:2:5: warning: incompatible implicit declaration of built-in function ‘printf’ [-Wbuiltin-declaration-mismatch]
+    2 |     printf("Hello, OS!\n");
+      |     ^~~~~~
+src/noinclude.c:2:5: note: include ‘<stdio.h>’ or provide a declaration of ‘printf’
 [exit code: 1]
 
 ===================================================================
@@ -308,13 +172,29 @@ int main(void) {
 }
 [exit code: 0]
 
-$ clang -g -O0 src/badcall.c -o build/badcall
-Undefined symbols for architecture x86_64:
-  "_does_not_exist", referenced from:
-      _main in badcall-8cb5cf.o
-ld: symbol(s) not found for architecture x86_64
-clang: error: linker command failed with exit code 1 (use -v to see invocation)
+$ gcc -g -O0 src/badcall.c -o build/badcall
+/usr/bin/ld: /tmp/ccfi7Rl4.o: in function `main':
+/home/auryxn/sdc-homework-3/os-and-syst-software/lab-1/src/badcall.c:8:(.text+0x14): undefined reference to `does_not_exist'
+collect2: error: ld returned 1 exit status
 [exit code: 1]
+
+===================================================================
+8. Проверка памяти (valgrind)
+===================================================================
+
+$ valgrind --leak-check=full ./build/sum < scripts/stdin.txt
+==6423== Command: ./build/sum
+==6423== 
+Введите первое число: Введите второе число: Сумма: 42
+==6423== 
+==6423== HEAP SUMMARY:
+==6423==     in use at exit: 0 bytes in 0 blocks
+==6423==   total heap usage: 2 allocs, 2 frees, 8,192 bytes allocated
+==6423== 
+==6423== All heap blocks were freed -- no leaks are possible
+==6423== 
+==6423== For lists of detected and suppressed errors, rerun with: -s
+==6423== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
 
 ===================================================================
 Готово

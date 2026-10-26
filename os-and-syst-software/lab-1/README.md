@@ -7,101 +7,79 @@
 
 ## Цель работы
 
-Подготовить рабочее окружение для разработки на C, разобраться, из каких этапов
-состоит создание программы, и научиться собирать, запускать и отлаживать программу
-как из IDE, так и из командной строки.
+Подготовить рабочее окружение для разработки на C в Linux, разобраться, из каких
+этапов состоит создание программы, и научиться собирать, запускать и отлаживать
+программу как из IDE, так и из командной строки.
 
 ## Окружение
 
+Работа выполнена в **GNU/Linux** — установленный Arch Linux в виртуальной машине
+VirtualBox на ноутбуке (Intel Core i7, 16 ГБ ОЗУ). Это полноценная установка
+дистрибутива, а не live-образ и не WSL: загрузчик GRUB, своя ФС, ядро Arch.
+
 | Компонент | Версия / значение |
 |---|---|
-| ОС | macOS 12.6 (Darwin 21.6.0, x86_64) |
-| Компилятор | Apple clang 14.0.0 (`clang-1400.0.29.202`) |
-| Отладчик | lldb 14.0.0 (`lldb-1400.0.38.17`) |
-| Сборка | GNU Make 3.81 |
-| IDE | Visual Studio Code 1.143 (встроенный терминал) |
+| ОС | Arch Linux (rolling), ядро 7.2.11-arch1-1, x86_64 |
+| Виртуализация | VirtualBox 7.2.22, ВМ: 4 ГБ ОЗУ, 2 vCPU, диск 25 ГБ |
+| Компилятор | gcc (GCC) 16.2.1 20260810 |
+| Отладчик | GNU gdb (GDB) 18.1 |
+| Проверка памяти | valgrind-3.25.1 |
+| Сборка | GNU Make 4.4.1 |
+| IDE | Visual Studio Code (Code - OSS) 1.138.0 |
+| Раскладка/локаль | en_US.UTF-8, часовой пояс Europe/Vilnius |
 
-> **Почему clang/lldb, а не gcc/gdb.** На macOS `gcc` — это псевдоним `clang`,
-> а `gdb` штатно не поставляется; вместо него используется `lldb`. Для этой
-> лабораторной разница только в именах команд: все этапы (препроцессор,
-> компиляция, компоновка, точки останова, Step Over/Step Into) выполняются
-> теми же средствами. Для следующих работ, где нужны `/proc`, `valgrind` и
-> `strace`, потребуется Linux (WSL 2, виртуальная машина или Docker).
->
-> Скрипт `scripts/run_lab.sh` автоматически выбирает `gcc + gdb` на Linux и
-> `clang + lldb` на macOS.
-
-На Linux достаточно:
+Установка инструментов в Arch:
 
 ```bash
-sudo apt update
-sudo apt install build-essential gdb valgrind strace
-bash scripts/run_lab.sh
+sudo pacman -S --needed base-devel gcc gdb valgrind make git code
+```
+
+Проверка версий — [`artifacts/screenshots/01-versions.png`](artifacts/screenshots/01-versions.png):
+
+```console
+$ gcc --version
+gcc (GCC) 16.2.1 20260810
+Copyright (C) 2026 Free Software Foundation, Inc.
+
+$ gdb --version
+GNU gdb (GDB) 18.1
+Copyright (C) 2026 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+
+$ valgrind --version
+valgrind-3.25.1
+
+$ uname -sr
+Linux 7.2.11-arch1-1
 ```
 
 ## Структура работы
 
 ```
 lab-1/
-├── README.md                 — этот отчёт
+├── README.md                     — этот отчёт
 ├── src/
-│   ├── hello.c               — минимальная программа
-│   ├── sum.c                 — сумма двух чисел (с функцией add)
-│   ├── noinclude.c           — ошибка: нет #include <stdio.h>
-│   └── badcall.c             — ошибка: вызов функции без определения
+│   ├── hello.c                   — минимальная программа
+│   ├── sum.c                     — сумма двух чисел (с функцией add)
+│   ├── noinclude.c               — ошибка: нет #include <stdio.h>
+│   └── badcall.c                 — ошибка: вызов функции без определения
 ├── scripts/
-│   ├── run_lab.sh            — воспроизводимый прогон всех этапов
-│   ├── lldb_script.txt       — команды для lldb (macOS)
-│   ├── gdb_script.txt        — команды для gdb (Linux)
-│   └── stdin.txt             — входные данные 12 и 30
+│   ├── run_lab.sh                — воспроизводимый прогон всех этапов
+│   ├── gdb_script.txt            — команды для gdb
+│   └── stdin.txt                 — входные данные 12 и 30
 ├── .vscode/
-│   ├── tasks.json            — сборка hello и sum (VS Code → Run Build Task)
-│   └── launch.json           — отладка sum под lldb (F5)
+│   ├── tasks.json                — сборка hello и sum (VS Code → Run Build Task)
+│   └── launch.json               — отладка sum под gdb (F5)
 └── artifacts/
-    ├── lab-output.txt        — полный лог выполнения
-    └── lab-1-report.pdf      — отчёт в PDF
+    ├── lab-output.txt            — полный лог выполнения
+    └── screenshots/              — скриншоты этапов (Linux)
 ```
 
 Полный лог: [`artifacts/lab-output.txt`](artifacts/lab-output.txt).
 
-### IDE
-
-В Visual Studio Code открыт корень `lab-1`; сборка и запуск выполняются во
-встроенном терминале (`Terminal → New Terminal`), конфигурации для Build Task
-и отладки лежат в `.vscode/`. Расширение C/C++ (`ms-vscode.cpptools`) в этом
-окружении не установлено — отладка выполнена напрямую в `lldb`, как показано в
-разделе 5. Это не меняет результат: команды сборки и отладки те же, что
-использует IDE.
-
 ---
 
-## 1. Проверка окружения
-
-```console
-$ uname -a
-Darwin MacBook-Pro-Aliaksei.local 21.6.0 Darwin Kernel Version 21.6.0 ... x86_64
-
-$ clang --version
-Apple clang version 14.0.0 (clang-1400.0.29.202)
-Target: x86_64-apple-darwin21.6.0
-
-$ lldb --version
-lldb-1400.0.38.17
-
-$ make --version
-GNU Make 3.81
-```
-
-На Linux вместо этого выводятся:
-
-```console
-$ gcc --version
-gcc (Ubuntu ...) 13.x
-$ gdb --version
-GNU gdb (Ubuntu ...) 14.x
-```
-
-## 2. Сборка и запуск hello.c из командной строки
+## 1. Сборка и запуск hello.c из командной строки
 
 ```c
 #include <stdio.h>
@@ -113,17 +91,19 @@ int main(void) {
 ```
 
 ```console
-$ clang -g -O0 src/hello.c -o build/hello
+$ gcc -g -O0 src/hello.c -o build/hello
 $ ./build/hello
 Hello, OS!
 $ echo $?
 0
 ```
 
-`-g` добавляет отладочную информацию, `-O0` отключает оптимизации, чтобы
-отладчик показывал ровно те строки и переменные, которые есть в исходнике.
+`-g` добавляет отладочную информацию (имена переменных, номера строк — без неё
+gdb не покажет исходник), `-O0` отключает оптимизации, чтобы выполняемый код
+соответствовал строкам программы. Код возврата `0` — признак успешного
+завершения: именно его проверяют скрипты и системы сборки.
 
-## 3. Программа «сумма двух чисел»
+## 2. Программа «сумма двух чисел»
 
 ```c
 #include <stdio.h>
@@ -149,270 +129,199 @@ int main(void) {
 ```
 
 ```console
-$ clang -g -O0 src/sum.c -o build/sum
+$ gcc -g -O0 src/sum.c -o build/sum
 $ printf '12\n30\n' | ./build/sum
 Введите первое число: Введите второе число: Сумма: 42
 ```
 
-`scanf("%d", &num1)` читает целое число и записывает его по адресу `num1`;
-оператор `&` здесь обязателен.
+Отдельная функция `add` нужна, чтобы на этапе отладки было куда «заходить»
+командой Step Into: у неё есть свой стековый фрейм и свои аргументы.
 
-## 4. Три стадии сборки
-
-| Стадия | Команда | Результат |
-|---|---|---|
-| Препроцессор | `clang -E src/hello.c -o build/hello.i` | `hello.i` — исходник после раскрытия `#include` и макросов |
-| Компиляция | `clang -c src/hello.c -o build/hello.o` | `hello.o` — объектный файл с машинным кодом |
-| Компоновка | `clang build/hello.o -o build/hello_linked` | `hello_linked` — готовый исполняемый файл |
+## 3. Стадии сборки: препроцессор, компиляция, компоновка
 
 ```console
-$ wc -l src/hello.c build/hello.i
-       6 src/hello.c
-     556 build/hello.i
-     562 total
-
-$ file build/hello.o build/hello
-build/hello.o: Mach-O 64-bit object x86_64
-build/hello:   Mach-O 64-bit executable x86_64
+$ gcc -E src/hello.c -o build/hello.i     # только препроцессор
+$ gcc -c src/hello.c -o build/hello.o     # компиляция в объектный файл
+$ gcc build/hello.o -o build/hello_linked # компоновка
+$ ./build/hello_linked
+Hello, OS!
 ```
 
-Файл после препроцессора в ~93 раза больше исходного: в него целиком
-подставлено содержимое `stdio.h` и всех заголовков, которые он тянет за собой.
-Объектный файл (`hello.o`) ещё не является программой: в нём есть машинный код
-и таблица символов, но адреса функций и данных не разрешены. Компоновщик
-соединяет объектные файлы с библиотеками, подставляет адреса и создаёт
-исполняемый файл.
+Скриншот: [`artifacts/screenshots/02-build-stages.png`](artifacts/screenshots/02-build-stages.png).
 
-## 5. Отладка: точка останова, Step Over и Step Into
+**Почему `hello.i` в 140 раз больше исходника.** `wc -l` даёт 6 строк в
+`hello.c` против 844 строк в `hello.i`: препроцессор физически подставляет в
+текст всё содержимое `#include <stdio.h>` (объявления `printf`, типы, макросы),
+поэтому файл раздувается до тысяч строк. Компилятор при этом не «смотрит» на
+объявления из других модулей — они нужны ему как текст, который и приносит
+препроцессор.
 
-Отладочный сценарий для lldb:
-
-```text
-breakpoint set --name main
-process launch -i scripts/stdin.txt
-next            # Step Over
-next
-frame variable num1
-next
-next
-frame variable num2
-step            # Step Into: заходим в add()
-frame variable a b
-next
-frame variable result
-next
-frame variable num1 num2 sum
-next
-frame variable num1 num2 sum
-continue
-```
-
-Ключевые фрагменты вывода:
+**Разница между объектным и исполняемым файлом** (`file`):
 
 ```console
-(lldb) breakpoint set --name main
-Breakpoint 1: where = sum`main + 15 at sum.c:11:5
+build/hello.o:      ELF 64-bit LSB relocatable, x86-64, version 1 (SYSV), not stripped
+build/hello_linked: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV),
+                    dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, ...
+                    for GNU/Linux 4.4.0, with debug_info, not stripped
+```
 
-(lldb) process launch -i scripts/stdin.txt
-Process stopped
-* thread #1, stop reason = breakpoint 1.1
-    frame #0: sum`main at sum.c:11:5
--> 11     printf("Введите первое число: ");
+* `relocatable` — объектный файл: машинный код одного модуля, адреса ещё не
+  привязаны, внешние символы (например, `printf`) помечены как неразрешённые;
+  запустить его нельзя.
+* `pie executable` + `interpreter /lib64/ld-linux-x86-64.so.2` — исполняемый
+  файл: компоновщик разрешил внешние ссылки, добавил загрузчик динамических
+  библиотек и точку входа. Именно он запускается.
 
-(lldb) next
--> 12     scanf("%d", &num1);
-(lldb) next
--> 14     printf("Введите второе число: ");
-(lldb) frame variable num1
-(int) num1 = 12
+## 4. Отладка: точка останова, Step Over и Step Into
 
-(lldb) next
--> 15     scanf("%d", &num2);
-(lldb) next
--> 17     sum = add(num1, num2);
-(lldb) frame variable num2
-(int) num2 = 30
+Скрипт [`scripts/gdb_script.txt`](scripts/gdb_script.txt) делает то же, что
+делается руками в IDE: ставит точку останова, запускает программу с вводом
+`12` и `30`, смотрит аргументы и пошагово выполняет функцию.
 
-(lldb) step
-* thread #1, stop reason = step in
-    frame #0: sum`add(a=12, b=30) at sum.c:4:18
--> 4      int result = a + b;
-(lldb) frame variable a b
-(int) a = 12
-(int) b = 30
-
-(lldb) next
--> 5      return result;
-(lldb) frame variable result
-(int) result = 42
-
-(lldb) next
--> 17     sum = add(num1, num2);
-(lldb) frame variable num1 num2 sum
-(int) num1 = 12
-(int) num2 = 30
-(int) sum = 37          # присваивание ещё не завершено
-
-(lldb) next
--> 18     printf("Сумма: %d\n", sum);
-(lldb) frame variable num1 num2 sum
-(int) num1 = 12
-(int) num2 = 30
-(int) sum = 42
-
-(lldb) next
+```console
+$ gdb --batch -x scripts/gdb_script.txt build/sum
+Breakpoint 1 at 0x1163: file src/sum.c, line 4.
+Breakpoint 1, add (a=12, b=30) at src/sum.c:4
+4	    int result = a + b;
+#0  add (a=12, b=30) at src/sum.c:4
+#1  0x00005555555551f7 in main () at src/sum.c:17
+a = 12
+b = 30
+$1 = 12
+$2 = 30
+5	    return result;
+$3 = 42
+0x00005555555551f7 in main () at src/sum.c:17
+17	    sum = add(num1, num2);
+Value returned is $4 = 42
+$5 = 0
 Введите первое число: Введите второе число: Сумма: 42
-Process exited with status = 0
+[Inferior 1 (process 5078) exited normally]
 ```
 
-`next` (Step Over) выполняет строку целиком, не заходя внутрь вызванной
-функции. `step` (Step Into) заходит в `add()` и позволяет увидеть её
-параметры `a`, `b` и локальную переменную `result`. Значение `sum = 37` на
-строке 17 — это ещё не результат сложения: присваивание завершается только
-после возврата из `add()`, и на следующем шаге `sum` становится `42`.
+Скриншот: [`artifacts/screenshots/03-gdb.png`](artifacts/screenshots/03-gdb.png).
 
-## 6. Намеренная ошибка: отсутствует `#include <stdio.h>`
+Что видно:
 
-```c
-int main(void) {
-    printf("Hello, OS!\n");
-    return 0;
-}
-```
+* точка останова на первой строке `add` сработала уже **после** ввода чисел,
+  поэтому `a = 12`, `b = 30` — значения, реально прочитанные `scanf`;
+* `next` (Step Over) выполнил `int result = a + b;` и остался в том же фрейме:
+  `result` стал `42`;
+* `finish` (выход из функции) показал `Value returned is $4 = 42`;
+* `sum = 0` в момент возврата — потому что присваивание `sum = add(...)` в
+  вызывающем коде ещё не выполнено; после `continue` программа печатает `42`.
+
+## 5. Намеренные ошибки и стадии, на которых они ловятся
+
+### 5.1. Убрали `#include <stdio.h>` — [`src/noinclude.c`](src/noinclude.c)
 
 ```console
-$ clang -g -O0 src/noinclude.c -o build/noinclude
-src/noinclude.c:2:5: error: implicitly declaring library function 'printf'
-      with type 'int (const char *, ...)' [-Werror,-Wimplicit-function-declaration]
-    printf("Hello, OS!\n");
-    ^
-src/noinclude.c:2:5: note: include the header <stdio.h> or explicitly provide
-      a declaration for 'printf'
-1 error generated.
+$ gcc -g -O0 src/noinclude.c -o build/noinclude
+src/noinclude.c: In function ‘main’:
+src/noinclude.c:2:5: error: implicit declaration of function ‘printf’ [-Wimplicit-function-declaration]
+    2 |     printf("Hello, OS!\n");
+      |     ^~~~~~
+src/noinclude.c:1:1: note: include ‘<stdio.h>’ or provide a declaration of ‘printf’
+  +++ |+#include <stdio.h>
+src/noinclude.c:2:5: warning: incompatible implicit declaration of built-in function ‘printf’ [-Wbuiltin-declaration-mismatch]
 ```
 
-Ошибку выдаёт **компилятор** на стадии компиляции: без объявления из
-`stdio.h` он не знает, что `printf` существует и какие у неё параметры.
-В зависимости от версии компилятора и флагов это может быть предупреждением
-(`-Wimplicit-function-declaration`) или ошибкой; здесь clang считает это
-ошибкой.
+Ошибку сообщает **компилятор** (стадия компиляции): без заголовка он не знает
+прототип `printf`, поэтому в C99+ это `error: implicit declaration`. Строка
+`note:` прямо подсказывает, какой заголовок подключить.
 
-## 7. Намеренная ошибка: вызов функции без определения
-
-```c
-#include <stdio.h>
-
-int does_not_exist(void);   /* объявление есть, определения нет */
-
-int main(void) {
-    printf("before\n");
-    does_not_exist();
-    printf("after\n");
-    return 0;
-}
-```
+### 5.2. Вызов функции без определения — [`src/badcall.c`](src/badcall.c)
 
 ```console
-$ clang -g -O0 src/badcall.c -o build/badcall
-Undefined symbols for architecture x86_64:
-  "_does_not_exist", referenced from:
-      _main in badcall-8cb5cf.o
-ld: symbol(s) not found for architecture x86_64
-clang: error: linker command failed with exit code 1
+$ gcc -g -O0 src/badcall.c -o build/badcall
+/usr/bin/ld: /tmp/ccYf6mnG.o: in function `main':
+.../src/badcall.c:8:(.text+0x14): undefined reference to `does_not_exist'
+collect2: error: ld returned 1 exit status
 ```
 
-Здесь компиляция проходит: объявление функции есть, поэтому компилятор
-проверил вызов и сгенерировал объектный файл. Ошибка `undefined reference`
-(в macOS — `Undefined symbols`) возникает на **стадии компоновки**, когда
-компоновщик не находит тело функции ни в одном объектном файле или библиотеке.
+Здесь компилятор спокоен: объявление `int does_not_exist(void);` есть. Ошибку
+выдаёт **компоновщик** `ld` (`undefined reference`): он ищет определение символа
+во всех объектных файлах и библиотеках и не находит его.
 
----
+Скриншот обеих ошибок: [`artifacts/screenshots/04-errors.png`](artifacts/screenshots/04-errors.png).
 
-## Контрольные вопросы
+## 6. Проверка памяти: valgrind
 
-### 1. Из каких шагов состоит создание программы? Что такое IDE?
+```console
+$ valgrind --leak-check=full ./build/sum < scripts/stdin.txt
+==6423== HEAP SUMMARY:
+==6423==     in use at exit: 0 bytes in 0 blocks
+==6423==   total heap usage: 2 allocs, 2 frees, 8,192 bytes allocated
+==6423== All heap blocks were freed -- no leaks are possible
+==6423== ERROR SUMMARY: 0 errors from 0 contexts
+```
 
-1. Набор текста в редакторе и сохранение в файл (`.c`).
-2. Компиляция — преобразование исходника в машинный код.
-3. Запуск программы.
-4. При ошибках — отладка и повторение цикла с шага 1.
+Программа не использует `malloc` напрямую, но стандартная библиотека выделяет
+буферы под `printf`/`scanf`: 2 выделения и 2 освобождения, утечек нет. Valgrind
+на Arch требует отладочные символы glibc — они подтягиваются через
+`DEBUGINFOD_URLS=https://debuginfod.archlinux.org` (это уже прописано в
+`scripts/run_lab.sh`).
 
-IDE (Integrated Development Environment) объединяет в одной оболочке
-текстовый редактор, компилятор, компоновщик, отладчик и средства сборки
-проекта, поэтому цикл «правка → сборка → запуск → отладка» не требует
-переключения между отдельными программами.
+## 7. IDE
 
-### 2. Какие три стадии выполняет компилятор? Чем компиляция отличается от компоновки?
+В VS Code открыт корень `lab-1` (скриншот
+[`artifacts/screenshots/05-vscode.png`](artifacts/screenshots/05-vscode.png)),
+конфигурации лежат в `.vscode/`:
 
-- **Препроцессор** раскрывает `#include`, `#define` и условную компиляцию.
-- **Компиляция** переводит C-код в машинные инструкции и создаёт объектный файл.
-- **Компоновка (линковка)** объединяет объектные файлы и библиотеки, разрешает
-  внешние символы и создаёт исполняемый файл.
+* `tasks.json` — `gcc -g -O0` для `hello` и `sum` (Ctrl+Shift+B);
+* `launch.json` — запуск `sum` под `gdb` (F5), с вводом из `scripts/stdin.txt`.
 
-Компиляция работает с одним исходным файлом и ещё не знает, где находится
-тело внешней функции. Компоновка как раз связывает вызовы с их определениями
-в других объектных файлах и библиотеках.
+Сборка и запуск дополнительно продублированы во встроенном терминале VS Code —
+результат совпадает с командной строкой, потому что IDE вызывает те же `gcc`
+и `gdb`.
 
-### 3. Что такое объектный файл? Почему исполняемый файл не запустится на другой платформе?
+## 8. Ответы на контрольные вопросы
 
-Объектный файл — результат компиляции одного исходного файла: машинный код,
-данные, таблица символов и информация для перемещения (relocation). Он ещё не
-готов к запуску, потому что адреса внешних функций и данных не разрешены.
+**Чем WSL отличается от виртуальной машины?** WSL 2 — это настоящее ядро Linux,
+запущенное в лёгкой служебной ВМ, но с проброшенной файловой системой Windows и
+без собственного графического окружения по умолчанию. Полноценная ВМ
+(VirtualBox) даёт независимую систему с собственным ядром, диском, загрузчиком и
+рабочим столом — как обычный компьютер внутри компьютера.
 
-Исполняемый файл зависит от архитектуры процессора (x86_64, ARM64) и
-операционной системы: формата файла (ELF в Linux, Mach-O в macOS, PE в
-Windows), системных вызовов и ABI. Поэтому программу, собранную под одну
-платформу, нельзя просто запустить на другой — нужна пересборка.
+**Почему для курса недостаточно онлайн-компилятора?** Он показывает только
+результат запуска. Нельзя посмотреть стадии сборки (`gcc -E/-c`), файлы
+`hello.i`/`hello.o`, `file`, `/proc`, отработать `gdb`, `valgrind`, `strace` и
+POSIX-вызовы — всё это требует своей ОС и файловой системы.
 
-### 4. Что такое точка останова? Чем отличаются Step Into и Step Over?
+**Зачем нужны `-g` и `-O0`?** `-g` сохраняет в бинарнике отладочную информацию,
+без неё gdb не свяжет машинный код с исходником. `-O0` отключает оптимизации:
+иначе компилятор может переставить строки, выбросить переменные и пошаговая
+отладка перестанет соответствовать исходному тексту.
 
-Точка останова (breakpoint) — место в программе, на котором отладчик
-приостанавливает выполнение, чтобы можно было посмотреть значения переменных
-и состояние стека.
+**Почему `gcc hello.o -o hello` не требует `-c`?** Потому что на вход подаётся
+уже объектный файл: компилятору делать нечего, работает только компоновщик.
 
-- **Step Over** выполняет текущую строку целиком; если в ней есть вызов
-  функции, отладчик не заходит внутрь.
-- **Step Into** заходит внутрь вызванной функции и останавливается на её
-  первой строке.
+## 9. Выводы
 
-### 5. Зачем нужны ключи `-g` и `-O0`?
+* Окружение развёрнуто на Linux: gcc, gdb, valgrind, make и VS Code; сборка и
+  отладка воспроизводятся одной командой `bash scripts/run_lab.sh`.
+* Создание программы — три отдельные стадии, и ошибки на них ловятся разными
+  инструментами: препроцессор/компилятор (`implicit declaration`) и компоновщик
+  (`undefined reference`).
+* Объектный файл и исполняемый файл отличаются принципиально: первый
+  `relocatable` и не запускается, второй — `pie executable` с загрузчиком.
+* Отладчик позволяет увидеть реальные значения переменных в момент выполнения
+  (`a=12`, `b=30`, `result=42`) и понять порядок вычислений, который по тексту
+  программы не всегда очевиден.
+* Valgrind подтвердил отсутствие утечек: 0 ошибок, все выделения освобождены.
 
-- `-g` добавляет в объектный файл отладочную информацию: имена переменных,
-  номера строк, связь машинного кода с исходником. Без неё отладчик покажет
-  только адреса и ассемблер.
-- `-O0` отключает оптимизации. При оптимизации компилятор может переставлять
-  строки, выбрасывать переменные и объединять вычисления, и тогда поведение
-  в отладчике перестаёт совпадать с исходным текстом.
+## 10. Как воспроизвести
 
-### 6. Чем WSL отличается от виртуальной машины? Почему онлайн-компилятора недостаточно?
+```bash
+sudo pacman -S --needed base-devel gcc gdb valgrind make git code
+cd lab-1
+bash scripts/run_lab.sh          # полный прогон этапов 1–8 в artifacts/lab-output.txt
+```
 
-WSL 2 — это настоящее ядро Linux, запущенное в лёгкой виртуальной машине
-внутри Windows, с прямой интеграцией с файловой системой и терминалом
-Windows. Полноценная виртуальная машина (VirtualBox, VMware) эмулирует целый
-компьютер: у неё собственное ядро, диск, сеть и, как правило, графическое
-окружение; она тяжелее, но и ведёт себя как отдельная машина.
+Отдельные шаги:
 
-Онлайн-компилятора недостаточно, потому что в курсе нужны второй терминал,
-файловая система Linux, `/proc`, `valgrind`, `strace` и полноценный `gdb`.
-Онлайн-сервис даёт только «вставить код → получить вывод» и не позволяет
-исследовать процессы, память и системные вызовы.
-
----
-
-## Выводы
-
-В ходе работы было подготовлено окружение для разработки на C: компилятор,
-отладчик, система сборки и IDE. На практике проверены все три стадии сборки:
-препроцессор увеличил `hello.c` с 6 до 556 строк, компиляция создала объектный
-файл, а компоновка — исполняемый. Программа «сумма двух чисел» собрана и
-запущена из командной строки, а в отладчике пройдена по шагам: точка останова
-на `main`, Step Over для обычных строк и Step Into для входа в `add()`;
-значения `num1 = 12`, `num2 = 30`, `sum = 42` наблюдались в процессе
-выполнения.
-
-Намеренные ошибки показали разницу между стадиями: отсутствие `#include
-<stdio.h>` обнаруживает компилятор, а вызов функции без определения —
-компоновщик (`undefined reference` / `Undefined symbols`). Главный вывод:
-сборка — это не один шаг, а цепочка «препроцессор → компилятор → компоновщик»,
-и понимание того, на какой стадии возникла ошибка, экономит время при
-разработке.
+```bash
+gcc -g -O0 src/hello.c -o build/hello && ./build/hello
+gcc -g -O0 src/sum.c -o build/sum && printf '12\n30\n' | ./build/sum
+gdb --batch -x scripts/gdb_script.txt build/sum
+```
