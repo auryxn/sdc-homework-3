@@ -1,0 +1,118 @@
+=== compile ===
+lab2.c: In function 'test_stack':
+lab2.c:54:6: warning: infinite recursion detected [-Winfinite-recursion]
+   54 | void test_stack(int depth)
+      |      ^~~~~~~~~~
+lab2.c:64:5: note: recursive call
+   64 |     test_stack(depth + 1);
+      |     ^~~~~~~~~~~~~~~~~~~~~
+=== uname ===
+Linux 7.2.11-arch1-1
+gcc (GCC) 16.2.1 20260810
+valgrind-3.25.1
+ulimit -s = 8192
+
+=== stage 1: segments ===
+PID:            844
+.data (global_init): 0x55a093819078
+.bss  (global_uninit): 0x55a0938190ac
+heap  (malloc(100)):  0x55a0b3d40010
+stack (local):        0x7ffee3845e8c
+.text (main):         0x55a093816588
+
+Enter, чтобы завершить программу...
+--- /proc/844/maps ---
+55a093815000-55a093816000 r--p 00000000 08:02 398903                     /root/lab2/lab2
+55a093816000-55a093817000 r-xp 00001000 08:02 398903                     /root/lab2/lab2
+55a093817000-55a093818000 r--p 00002000 08:02 398903                     /root/lab2/lab2
+55a093818000-55a093819000 r--p 00002000 08:02 398903                     /root/lab2/lab2
+55a093819000-55a09381a000 rw-p 00003000 08:02 398903                     /root/lab2/lab2
+55a0b3d40000-55a0b3d61000 rw-p 00000000 00:00 0                          [heap]
+7ffee3826000-7ffee3847000 rw-p 00000000 00:00 0                          [stack]
+
+=== stage 2: stack growth (ulimit 8192 KB) ===
+exit code: 139
+/root/lab2/run_lab2.sh: line 23:   850 Segmentation fault         (core dumped) ./lab2 2 > /tmp/s2.txt 2>&1
+frames printed: 7820
+Начинаем рекурсию, стек: ulimit -s = 8192 КБ
+depth =     1, &buffer[0] = 0x7fff96042060
+depth =     2, &buffer[0] = 0x7fff96041c30
+...
+depth =  7818, &buffer[0] = 0x7fff958442b0
+depth =  7819, &buffer[0] = 0x7fff95843e80
+depth =  7820, &buffer[0] = 0x7fff95843a50
+
+=== stage 2: same with ulimit -s 1024 ===
+/root/lab2/run_lab2.sh: line 31:   862 Segmentation fault         (core dumped) ./lab2 2 > /tmp/s2b.txt 2>&1
+exit code: 139
+depth =   971, &buffer[0] = 0x7fff1a7caa30
+
+=== stage 3: little-endian ===
+x = 0x41424344, sizeof(x) = 4
+байт 0: адрес 0x7ffcf8d3ad74  hex 44  символ 'D'
+байт 1: адрес 0x7ffcf8d3ad75  hex 43  символ 'C'
+байт 2: адрес 0x7ffcf8d3ad76  hex 42  символ 'B'
+байт 3: адрес 0x7ffcf8d3ad77  hex 41  символ 'A'
+
+=== stage 4: leak ===
+==872== HEAP SUMMARY:
+==872==     in use at exit: 40 bytes in 1 blocks
+==872==   total heap usage: 2 allocs, 1 frees, 4,136 bytes allocated
+==872== 
+==872== 40 bytes in 1 blocks are definitely lost in loss record 1 of 1
+==872==    at 0x48658A8: malloc (vg_replace_malloc.c:446)
+==872==    by 0x40014DD: stage4 (lab2.c:95)
+==872==    by 0x4001630: main (lab2.c:130)
+==872== 
+==872== LEAK SUMMARY:
+==872==    definitely lost: 40 bytes in 1 blocks
+==872==    indirectly lost: 0 bytes in 0 blocks
+==872==      possibly lost: 0 bytes in 0 blocks
+==872==    still reachable: 0 bytes in 0 blocks
+==872==         suppressed: 0 bytes in 0 blocks
+==872== 
+==872== For lists of detected and suppressed errors, rerun with: -s
+==872== ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 0 from 0)
+
+=== stage 4: fixed ===
+==878== HEAP SUMMARY:
+==878==     in use at exit: 0 bytes in 0 blocks
+==878==   total heap usage: 2 allocs, 2 frees, 4,136 bytes allocated
+==878== 
+==878== All heap blocks were freed -- no leaks are possible
+==878== 
+==878== For lists of detected and suppressed errors, rerun with: -s
+==878== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+
+=== stage 5: ASLR on (3 runs) ===
+--- run 1 ---
+.data (global_init): 0x560f522ce078
+.bss  (global_uninit): 0x560f522ce0ac
+heap  (malloc(100)):  0x560f53ea9010
+stack (local):        0x7ffd378ecffc
+.text (main):         0x560f522cb588
+--- run 2 ---
+.data (global_init): 0x555868dd7078
+.bss  (global_uninit): 0x555868dd70ac
+heap  (malloc(100)):  0x55588d908010
+stack (local):        0x7ffe1e76971c
+.text (main):         0x555868dd4588
+--- run 3 ---
+.data (global_init): 0x559994a27078
+.bss  (global_uninit): 0x559994a270ac
+heap  (malloc(100)):  0x5599c1649010
+stack (local):        0x7ffdb8ffb38c
+.text (main):         0x559994a24588
+=== stage 5: ASLR off (setarch -R, 2 runs) ===
+--- run 1 ---
+.data (global_init): 0x555555558078
+.bss  (global_uninit): 0x5555555580ac
+heap  (malloc(100)):  0x555555559010
+stack (local):        0x7fffffffea4c
+.text (main):         0x555555555588
+--- run 2 ---
+.data (global_init): 0x555555558078
+.bss  (global_uninit): 0x5555555580ac
+heap  (malloc(100)):  0x555555559010
+stack (local):        0x7fffffffea4c
+.text (main):         0x555555555588
