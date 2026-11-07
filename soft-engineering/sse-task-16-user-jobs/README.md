@@ -5,7 +5,7 @@
 ## Task
 
 Select the user, ask ChatGPT to identify the user's jobs, classify each job as physical, mental
-or emotional, and present the result as a `Job | Job Type` table. The result is also shared in
+or emotional, and present the result as a `Job | Job Type` table. The result is also to be shared in
 the assignment chat.
 
 ## The system and the user
