@@ -1,17 +1,3 @@
-/*
-	HomeTask #1 - ETL
-	Move gym visits from Staging_Gym_visit into the DWH (Dim_Date + Fact_Visit).
-
-	Run order:
-		1. HT1_part1.sql   - creates the DWH and the staging table, loads the first data set
-		2. etl.sql         - creates the error table and the procedure, runs the load
-		3. HT1_part2.sql   - adds the second data set
-		4. call run_etl(); - load the new rows
-*/
-
--- ---------------------------------------------------------------
--- Rows that cannot be loaded are moved here instead of the DWH
--- ---------------------------------------------------------------
 create table if not exists Etl_Rejected_Visit (
 	rejected_id   serial primary key,
 	v_id          int,
@@ -25,9 +11,6 @@ create table if not exists Etl_Rejected_Visit (
 	rejected_at   timestamp not null default now()
 );
 
--- ---------------------------------------------------------------
--- ETL procedure
--- ---------------------------------------------------------------
 create or replace procedure run_etl()
 language plpgsql
 as $$
@@ -36,7 +19,6 @@ declare
 	v_duplicates int;
 	v_loaded     int;
 begin
-	-- Step 1. Add every new date from staging to Dim_Date
 	insert into Dim_Date (date_key, day_number_of_month, month_number_of_year, year_number, day_name, month_name)
 	select s.visit_date,
 	       extract(day from s.visit_date)::int,
@@ -49,7 +31,6 @@ begin
 	group by s.visit_date
 	on conflict (date_key) do nothing;
 
-	-- Step 2. Find rows that cannot be trusted and move them to the error table
 	with checked as (
 		select s.v_id,
 		       case
@@ -84,8 +65,6 @@ begin
 	using Etl_Rejected_Visit r
 	where r.v_id = s.v_id;
 
-	-- Step 3. Build one row per visit.
-	-- Duplicates (same member, gym, date, time_in, time_out) are counted first
 	select count(*) - count(distinct (visit_date, gym_code, personal_code, time_in, time_out))
 	into v_duplicates
 	from Staging_Gym_visit
@@ -103,7 +82,6 @@ begin
 		src_ids       int[]
 	);
 
-	-- 3a. Visits that already have both times in one row (Gym_1, and complete Gym_2 rows)
 	insert into tmp_etl_visits (gym_code, personal_code, gym_id, member_id,
 	                            visit_date, time_in, time_out, src_ids)
 	select s.gym_code, s.personal_code, g.gym_id, m.member_id,
@@ -115,67 +93,4 @@ begin
 	group by s.gym_code, s.personal_code, g.gym_id, m.member_id,
 	         s.visit_date, s.time_in, s.time_out;
 
-	-- 3b. Gym_2 visits split over two rows: first row has time_in, second has time_out.
-	-- Rows are paired in chronological order inside the same gym/member/date.
 	insert into tmp_etl_visits (gym_code, personal_code, gym_id, member_id,
-	                            visit_date, time_in, time_out, src_ids)
-	select o.gym_code, o.personal_code, o.gym_id, o.member_id,
-	       o.visit_date, o.time_in, c.time_out, array[o.v_id, c.v_id]
-	from (
-		select s.v_id, s.gym_code, s.personal_code, g.gym_id, m.member_id, s.visit_date, s.time_in,
-		       row_number() over (partition by s.gym_code, s.personal_code, s.visit_date
-		                          order by s.time_in) as rn
-		from Staging_Gym_visit s
-		join Dim_Member m on m.personal_code = s.personal_code
-		join Dim_Gym g on g.gym_code = s.gym_code
-		where s.time_in is not null and s.time_out is null
-	) o
-	join (
-		select s.v_id, s.gym_code, s.personal_code, s.visit_date, s.time_out,
-		       row_number() over (partition by s.gym_code, s.personal_code, s.visit_date
-		                          order by s.time_out) as rn
-		from Staging_Gym_visit s
-		where s.time_in is null and s.time_out is not null
-	) c
-	  on c.gym_code = o.gym_code
-	 and c.personal_code = o.personal_code
-	 and c.visit_date = o.visit_date
-	 and c.rn = o.rn
-	 and c.time_out > o.time_in;
-
-	-- Step 4. Load the visits into the fact table
-	insert into Fact_Visit (gym_id, member_id, visit_date_key, visit_duration, day_part)
-	select v.gym_id,
-	       v.member_id,
-	       v.visit_date,
-	       (extract(epoch from (v.time_out - v.time_in)) / 60)::int,
-	       (case
-	            when v.time_in < time '10:01' then 'Morning'
-	            when v.time_in < time '17:01' then 'Day'
-	            else 'Evening'
-	        end)::day_part_enum
-	from tmp_etl_visits v;
-
-	get diagnostics v_loaded = row_count;
-
-	-- Step 5. Remove what was loaded from staging
-	delete from Staging_Gym_visit s
-	where s.v_id in (select unnest(v.src_ids) from tmp_etl_visits v);
-
-	-- Half-rows that were completed by a full row in this run are not needed any more
-	delete from Staging_Gym_visit s
-	using tmp_etl_visits v
-	where s.gym_code = v.gym_code
-	  and s.personal_code = v.personal_code
-	  and s.visit_date = v.visit_date
-	  and ((s.time_in = v.time_in and s.time_out is null)
-	    or (s.time_in is null and s.time_out = v.time_out));
-
-	drop table if exists tmp_etl_visits;
-
-	raise notice 'ETL finished: % visits loaded, % rows rejected, % duplicates collapsed, % rows left in staging',
-		v_loaded, v_rejected, v_duplicates, (select count(*) from Staging_Gym_visit);
-end;
-$$;
-
-call run_etl();
